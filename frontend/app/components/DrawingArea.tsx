@@ -1,15 +1,17 @@
 "use client";
 import { useState } from "react";
-import Canvas from "./Canvas";
+import Canvas, { CanvasRef } from "./Canvas"; // Importe o CanvasRef
 import Toolbar from "./Toolbar";
 import styles from "./components.module.css";
 import clsx from "clsx";
+import { useWebSocket } from "../context/SocketContext"; // Importe o hook
 
 interface DrawingAreaProps {
-  canvasRef: React.RefObject<HTMLCanvasElement>;
+  canvasRef: React.RefObject<CanvasRef>; // Use o tipo CanvasRef
   wordToDraw: string;
   title: string;
   isMyTurn: boolean;
+  drawerId: "DRAWER_1" | "DRAWER_2"; // Identificador para o desenhista
 }
 
 const DrawingArea: React.FC<DrawingAreaProps> = ({
@@ -17,41 +19,53 @@ const DrawingArea: React.FC<DrawingAreaProps> = ({
   wordToDraw,
   title,
   isMyTurn,
+  drawerId,
 }) => {
   const [color, setColor] = useState("#000000");
   const [lineWidth, setLineWidth] = useState(5);
   const [tool, setTool] = useState<any>("brush");
+  const socket = useWebSocket();
+
+  const handleDraw = (drawData: any) => {
+    if (socket && isMyTurn) {
+      const message = {
+        type: "DRAW",
+        payload: {
+          drawerId,
+          ...drawData,
+        },
+      };
+      socket.send(JSON.stringify(message));
+    }
+  };
 
   const handleClearCanvas = () => {
-    if (canvasRef.current) {
-      const context = canvasRef.current.getContext("2d");
-      if (context) {
-        context.fillStyle = "#FFFFFF";
-        context.fillRect(
-          0,
-          0,
-          canvasRef.current.width,
-          canvasRef.current.height
-        );
-      }
+    // Limpa o canvas localmente
+    canvasRef.current?.clear();
+
+    // Envia o evento de limpeza para outros jogadores
+    if (socket && isMyTurn) {
+      const message = {
+        type: "CLEAR",
+        payload: {
+          drawerId,
+        },
+      };
+      socket.send(JSON.stringify(message));
     }
   };
 
   return (
     <div
       className={clsx(
-        ...styles.drawingArea,
-        ...(isMyTurn
-          ? styles.drawingAreaActive
-          : styles.drawingAreaInactive)
+        styles.drawingArea,
+        isMyTurn ? styles.drawingAreaActive : styles.drawingAreaInactive
       )}
     >
       <h2 className={styles.drawingAreaTitle}>{title}</h2>
       {isMyTurn && (
         <div className={styles.wordToDraw}>
-          <p className={styles.wordToDrawLabel}>
-            Sua palavra para desenhar é:
-          </p>
+          <p className={styles.wordToDrawLabel}>Sua palavra para desenhar é:</p>
           <p className={styles.wordToDrawText}>{wordToDraw}</p>
         </div>
       )}
@@ -70,9 +84,10 @@ const DrawingArea: React.FC<DrawingAreaProps> = ({
             color={color}
             lineWidth={lineWidth}
             tool={tool}
-            width={920}
-            height={200}
+            width={500}
+            height={500}
             disabled={!isMyTurn}
+            onDraw={handleDraw} // Passe a função de callback
           />
         </div>
       </div>
