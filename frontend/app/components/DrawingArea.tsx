@@ -84,8 +84,8 @@ const DrawingArea: React.FC<DrawingAreaProps> = ({
             color={color}
             lineWidth={lineWidth}
             tool={tool}
-            width={500}
-            height={500}
+            width={700}
+            height={448}
             disabled={!isMyTurn}
             onDraw={handleDraw} // Passe a função de callback
           />
