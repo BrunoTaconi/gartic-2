@@ -4,7 +4,7 @@ export interface Word {
 }
 
 export interface Guess {
-  user: string;
+  user: string | any;
   text: string;
   type: 'guess' | 'correct_part' | 'correct_keyword';
 }

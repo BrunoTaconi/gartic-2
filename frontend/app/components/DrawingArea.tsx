@@ -1,17 +1,20 @@
 "use client";
 import { useState } from "react";
-import Canvas, { CanvasRef } from "./Canvas"; // Importe o CanvasRef
+import Canvas, { CanvasRef } from "./Canvas";
 import Toolbar from "./Toolbar";
 import styles from "./components.module.css";
 import clsx from "clsx";
-import { useWebSocket } from "../context/SocketContext"; // Importe o hook
+import { useWebSocket } from "../context/SocketContext";
 
 interface DrawingAreaProps {
-  canvasRef: React.RefObject<CanvasRef>; // Use o tipo CanvasRef
+  canvasRef: React.RefObject<CanvasRef>;
   wordToDraw: string;
   title: string;
   isMyTurn: boolean;
-  drawerId: "DRAWER_1" | "DRAWER_2"; // Identificador para o desenhista
+  drawerId: "DRAWER_1" | "DRAWER_2";
+
+  onDraw: (drawData: any) => void;
+  onClear: () => void;
 }
 
 const DrawingArea: React.FC<DrawingAreaProps> = ({
@@ -20,6 +23,8 @@ const DrawingArea: React.FC<DrawingAreaProps> = ({
   title,
   isMyTurn,
   drawerId,
+  onDraw,
+  onClear,
 }) => {
   const [color, setColor] = useState("#000000");
   const [lineWidth, setLineWidth] = useState(5);
@@ -27,31 +32,15 @@ const DrawingArea: React.FC<DrawingAreaProps> = ({
   const socket = useWebSocket();
 
   const handleDraw = (drawData: any) => {
-    if (socket && isMyTurn) {
-      const message = {
-        type: "DRAW",
-        payload: {
-          drawerId,
-          ...drawData,
-        },
-      };
-      socket.send(JSON.stringify(message));
+    if (isMyTurn) {
+      onDraw(drawData);
     }
   };
 
   const handleClearCanvas = () => {
-    // Limpa o canvas localmente
-    canvasRef.current?.clear();
-
-    // Envia o evento de limpeza para outros jogadores
-    if (socket && isMyTurn) {
-      const message = {
-        type: "CLEAR",
-        payload: {
-          drawerId,
-        },
-      };
-      socket.send(JSON.stringify(message));
+    if (isMyTurn) {
+      canvasRef.current?.clear();
+      onClear();
     }
   };
 

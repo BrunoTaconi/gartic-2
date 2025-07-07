@@ -9,8 +9,9 @@ interface GameInfoProps {
   game: GameState;
   onGuess: (guess: string) => void;
   message: string;
-  currentPlayer: Player;
+  currentPlayer: Player | null;
 }
+
 
 const GameInfo: React.FC<GameInfoProps> = ({
   game,
@@ -23,7 +24,7 @@ const GameInfo: React.FC<GameInfoProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (currentGuess.trim() && currentPlayer.role === "GUESSER") {
+    if (currentGuess.trim() && currentPlayer?.role === "GUESSER") {
       onGuess(currentGuess.trim());
       setCurrentGuess("");
     }
@@ -31,7 +32,7 @@ const GameInfo: React.FC<GameInfoProps> = ({
 
   const generateKeywordDisplay = () => {
     if (!game.word) return "Carregando...";
-    if (currentPlayer.role === "GUESSER") {
+    if (currentPlayer?.role === "GUESSER") {
       let display = game.word.keyword;
       const unGuessedParts = game.word.parts.filter(
         (p) => !game.partsGuessed.includes(p.toUpperCase())
@@ -64,7 +65,7 @@ const GameInfo: React.FC<GameInfoProps> = ({
         {message && <p className={styles.message}>{message}</p>}
       </div>
       <div className={styles.inputSection}>
-        {currentPlayer.role === "GUESSER" ? (
+        {currentPlayer?.role === "GUESSER" ? (
           <form onSubmit={handleSubmit}>
             <input
               type="text"
@@ -72,7 +73,7 @@ const GameInfo: React.FC<GameInfoProps> = ({
               onChange={(e) => setCurrentGuess(e.target.value)}
               placeholder="Digite seu palpite aqui..."
               className={styles.guessInput}
-              disabled={currentPlayer.role !== "GUESSER"}
+              disabled={currentPlayer?.role !== "GUESSER"}
             />
           </form>
         ) : (

@@ -19,10 +19,18 @@ const wordList: Word[] = [
 ];
 
 export default function HomePage() {
-  const canvasRef1 = useRef<CanvasRef>(null);
-  const canvasRef2 = useRef<CanvasRef>(null);
+  const canvasRef1 = useRef<CanvasRef | any>(null);
+  const canvasRef2 = useRef<CanvasRef | any>(null);
+
+  const [roomId, setRoomId] = useState<string>("default-room");
+  const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
+  const [hasJoined, setHasJoined] = useState(false);
+
   const [currentPlayerId, setCurrentPlayerId] = useState<string>("player1");
-  const currentPlayer = MOCKED_PLAYERS[currentPlayerId];
+  const currentPlayer = selectedPlayerId
+    ? MOCKED_PLAYERS[selectedPlayerId]
+    : null;
+
   const [game, setGame] = useState<GameState>({
     word: null,
     drawer1: { id: "player1", word: "" },
@@ -35,7 +43,7 @@ export default function HomePage() {
   const socket = useWebSocket();
 
   useEffect(() => {
-    if (!socket) return;
+    if (!socket || !hasJoined) return;
 
     socket.onmessage = (event) => {
       const message = JSON.parse(event.data);
@@ -62,19 +70,32 @@ export default function HomePage() {
           break;
       }
     };
-  }, [socket]);
+  }, [socket, hasJoined]);
+
+  const handleJoinRoom = () => {
+    if (socket && selectedPlayerId && roomId) {
+      socket.send(
+        JSON.stringify({
+          type: "JOIN_ROOM",
+          payload: { roomId, playerId: selectedPlayerId },
+        })
+      );
+      setHasJoined(true);
+    }
+  };
 
   const broadcastGameState = (
     updatedGame: GameState,
     updatedMessage: string
   ) => {
-    if (socket) {
+    if (socket && hasJoined) {
       socket.send(
         JSON.stringify({
           type: "GAME_STATE_UPDATE",
           payload: {
             game: updatedGame,
             message: updatedMessage,
+            roomId: roomId,
           },
         })
       );
@@ -111,10 +132,33 @@ export default function HomePage() {
   };
 
   useEffect(() => {
-    if (currentPlayer.id === "player1") {
+    if (currentPlayer?.id === "player1") {
       startNewTurn();
     }
   }, []);
+
+  const handleDraw = (drawData: any, drawerId: string) => {
+    if (socket && hasJoined) {
+      socket.send(
+        JSON.stringify({
+          type: "DRAW",
+          payload: { ...drawData, drawerId, roomId },
+        })
+      );
+    }
+  };
+
+  const handleClear = (drawerId: string) => {
+    if (socket && hasJoined) {
+      canvasRef1.current?.clear();
+      socket.send(
+        JSON.stringify({
+          type: "CLEAR",
+          payload: { drawerId, roomId },
+        })
+      );
+    }
+  };
 
   const handleGuess = (guessText: string) => {
     if (!game.word) return;
@@ -122,7 +166,7 @@ export default function HomePage() {
     const { keyword, parts } = game.word;
 
     let newGuess: Guess = {
-      user: currentPlayer.name,
+      user: currentPlayer?.name,
       text: guessText,
       type: "guess",
     };
@@ -166,28 +210,42 @@ export default function HomePage() {
     if (shouldStartNewTurn) setTimeout(startNewTurn, 3000);
   };
 
+  if (!hasJoined || !currentPlayer) {
+    return (
+      <div className={styles.container}>
+        <main className={styles.mainContent}>
+          <h2>Escolha seu Papel</h2>
+          <div className={styles.playerSelectorGroup}>
+            {Object.values(MOCKED_PLAYERS).map((player) => (
+              <button
+                key={player.id}
+                onClick={() => setSelectedPlayerId(player.id)}
+                className={clsx(
+                  styles.playerButton,
+                  selectedPlayerId === player.id && styles.playerButtonActive
+                )}
+              >
+                {player.role === "GUESSER" ? (
+                  <Users size={16} />
+                ) : (
+                  <User size={16} />
+                )}
+                {player.name}
+              </button>
+            ))}
+          </div>
+          <button onClick={handleJoinRoom} disabled={!selectedPlayerId}>
+            Entrar na Sala
+          </button>
+        </main>
+      </div>
+    );
+  }
+
+
   return (
     <div className={styles.container}>
       <main className={styles.mainContent}>
-        <div className={styles.playerSelectorGroup}>
-          {Object.values(MOCKED_PLAYERS).map((player) => (
-            <button
-              key={player.id}
-              onClick={() => setCurrentPlayerId(player.id)}
-              className={clsx(
-                styles.playerButton,
-                currentPlayerId === player.id && styles.playerButtonActive
-              )}
-            >
-              {player.role === "GUESSER" ? (
-                <Users size={16} />
-              ) : (
-                <User size={16} />
-              )}
-              {player.name}
-            </button>
-          ))}
-        </div>
         <div className={styles.drawingSection}>
           <DrawingArea
             canvasRef={canvasRef1}
@@ -195,6 +253,8 @@ export default function HomePage() {
             wordToDraw={game.drawer1.word}
             isMyTurn={currentPlayer.role === "DRAWER_1"}
             drawerId="DRAWER_1"
+            onDraw={(drawData: any) => handleDraw(drawData, "DRAWER_1")}
+            onClear={() => handleClear("DRAWER_1")}
           />
           <DrawingArea
             canvasRef={canvasRef2}
@@ -202,6 +262,8 @@ export default function HomePage() {
             wordToDraw={game.drawer2.word}
             isMyTurn={currentPlayer.role === "DRAWER_2"}
             drawerId="DRAWER_2"
+            onDraw={(drawData: any) => handleDraw(drawData, "DRAWER_2")}
+            onClear={() => handleClear("DRAWER_2")}
           />
         </div>
         <div className={styles.infoSection}>
