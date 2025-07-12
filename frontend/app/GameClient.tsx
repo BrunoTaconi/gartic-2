@@ -3,7 +3,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { GameState, Guess, Word, Player } from "./types";
-import { MOCKED_PLAYERS } from "./components/data"; 
+import { MOCKED_PLAYERS } from "./components/data";
 import { User, Users } from "lucide-react";
 import DrawingArea from "./components/DrawingArea";
 import styles from "./page.module.css";
@@ -11,6 +11,7 @@ import clsx from "clsx";
 import { CanvasRef } from "./components/Canvas";
 import GameInfo from "./components/GameInfo";
 import { useWebSocket } from "./context/SocketContext";
+import { useHasMounted } from "./hooks/useHasMounted";
 
 const wordList: Word[] = [
   { parts: ["GUARDA", "CHUVA"], keyword: "GUARDA-CHUVA" },
@@ -22,6 +23,7 @@ const wordList: Word[] = [
 
 // O nome da função foi alterado aqui
 export default function GameClient() {
+  const hasMounted = useHasMounted();
   const canvasRef1 = useRef<CanvasRef | any>(null);
   const canvasRef2 = useRef<CanvasRef | any>(null);
 
@@ -126,10 +128,16 @@ export default function GameClient() {
 
     if (socket) {
       socket.send(
-        JSON.stringify({ type: "CLEAR", payload: { drawerId: "DRAWER_1", roomId } })
+        JSON.stringify({
+          type: "CLEAR",
+          payload: { drawerId: "DRAWER_1", roomId },
+        })
       );
       socket.send(
-        JSON.stringify({ type: "CLEAR", payload: { drawerId: "DRAWER_2", roomId } })
+        JSON.stringify({
+          type: "CLEAR",
+          payload: { drawerId: "DRAWER_2", roomId },
+        })
       );
     }
   };
@@ -155,9 +163,9 @@ export default function GameClient() {
   const handleClear = (drawerId: string) => {
     if (socket && hasJoined) {
       // Limpa localmente primeiro para resposta imediata
-      if (drawerId === 'DRAWER_1') canvasRef1.current?.clear();
-      if (drawerId === 'DRAWER_2') canvasRef2.current?.clear();
-      
+      if (drawerId === "DRAWER_1") canvasRef1.current?.clear();
+      if (drawerId === "DRAWER_2") canvasRef2.current?.clear();
+
       socket.send(
         JSON.stringify({
           type: "CLEAR",
@@ -216,6 +224,10 @@ export default function GameClient() {
 
     if (shouldStartNewTurn) setTimeout(startNewTurn, 3000);
   };
+
+  if (!hasMounted) {
+    return null; 
+  }
 
   if (!hasJoined || !currentPlayer) {
     return (

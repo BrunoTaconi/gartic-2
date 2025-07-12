@@ -11,9 +11,9 @@ interface Room {
 
 const rooms: Map<string, Room> = new Map();
 
-const wss = new WebSocketServer({ port: 8080 });
+const wss = new WebSocketServer({ host: "0.0.0.0", port: 8001});
 
-console.log("Servidor WebSocket iniciado na porta 8080.");
+console.log("Servidor WebSocket iniciado na porta 8001.");
 
 function broadcastToRoom(roomId: string, message: object) {
   const room = rooms.get(roomId);
