@@ -21,9 +21,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <WebSocketProvider>
-        <body className={`${poppins.variable} antialiased`}>{children}</body>
-      </WebSocketProvider>
+      <body className={`${poppins.variable} antialiased`}>
+        <WebSocketProvider>{children}</WebSocketProvider>
+      </body>
     </html>
   );
 }
