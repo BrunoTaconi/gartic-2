@@ -12,7 +12,6 @@ interface GameInfoProps {
   currentPlayer: Player | null;
 }
 
-
 const GameInfo: React.FC<GameInfoProps> = ({
   game,
   onGuess,
@@ -32,18 +31,40 @@ const GameInfo: React.FC<GameInfoProps> = ({
 
   const generateKeywordDisplay = () => {
     if (!game.word) return "Carregando...";
+
+    const { keyword, parts } = game.word;
+    const [part1, part2] = parts;
+    let display = keyword;
+
     if (currentPlayer?.role === "GUESSER") {
-      let display = game.word.keyword;
-      const unGuessedParts = game.word.parts.filter(
+      const unGuessedParts = parts.filter(
         (p) => !game.partsGuessed.includes(p.toUpperCase())
       );
       unGuessedParts.forEach((part) => {
-        const regex = new RegExp(part, "gi");
+        const regex = new RegExp(
+          part.replace(/[-\/\\^$*+?.()|[\]{}]/g, "\\$&"),
+          "gi"
+        );
         display = display.replace(regex, (match) => match.replace(/\S/g, "_"));
       });
-      return display.split("").join(" ");
+    } else if (currentPlayer?.role === "DRAWER_1") {
+      const regex = new RegExp(
+        part2.replace(/[-\/\\^$*+?.()|[\]{}]/g, "\\$&"),
+        "gi"
+      );
+      display = keyword.replace(regex, (match) => match.replace(/\S/g, "_"));
+    } else if (currentPlayer?.role === "DRAWER_2") {
+      const regex = new RegExp(
+        part1.replace(/[-\/\\^$*+?.()|[\]{}]/g, "\\$&"),
+        "gi"
+      );
+      display = keyword.replace(regex, (match) => match.replace(/\S/g, "_"));
     }
-    return game.word.keyword.split("").join(" ");
+
+    return display
+      .split(" ")
+      .map((word) => word.split("").join(" "))
+      .join("   ");
   };
 
   const getGuessStyle = (type: any) => {
@@ -92,10 +113,7 @@ const GameInfo: React.FC<GameInfoProps> = ({
           {game.guesses.map((guess, index) => (
             <li
               key={index}
-              className={clsx(
-                ...styles.guessItem,
-                ...getGuessStyle(guess.type)
-              )}
+              className={clsx(styles.guessItem, getGuessStyle(guess.type))}
             >
               <span className={styles.guessUser}>{guess.user}:</span>{" "}
               {guess.text}

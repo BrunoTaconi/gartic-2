@@ -13,13 +13,13 @@ import GameInfo from "./components/GameInfo";
 import { useWebSocket } from "./context/SocketContext";
 import { useHasMounted } from "./hooks/useHasMounted";
 
-const wordList: Word[] = [
-  { parts: ["GUARDA", "CHUVA"], keyword: "GUARDA-CHUVA" },
-  { parts: ["CACHORRO", "QUENTE"], keyword: "CACHORRO-QUENTE" },
-  { parts: ["PÃO", "QUEIJO"], keyword: "PÃO DE QUEIJO" },
-  { parts: ["PÉ", "MOLEQUE"], keyword: "PÉ DE MOLEQUE" },
-  { parts: ["ARCO", "ÍRIS"], keyword: "ARCO-ÍRIS" },
-];
+// const wordList: Word[] = [
+//   { parts: ["GUARDA", "CHUVA"], keyword: "GUARDA-CHUVA" },
+//   { parts: ["CACHORRO", "QUENTE"], keyword: "CACHORRO-QUENTE" },
+//   { parts: ["PÃO", "QUEIJO"], keyword: "PÃO DE QUEIJO" },
+//   { parts: ["PÉ", "MOLEQUE"], keyword: "PÉ DE MOLEQUE" },
+//   { parts: ["ARCO", "ÍRIS"], keyword: "ARCO-ÍRIS" },
+// ];
 
 export default function GameClient() {
   const hasMounted = useHasMounted();
@@ -219,11 +219,9 @@ export default function GameClient() {
             message={message}
             currentPlayer={currentPlayer}
           />
-           {currentPlayer.id === 'player1' && (
-                <button onClick={handleStartNewTurn} className={styles.newTurnButton}>
-                    Novo Turno
-                </button>
-            )}
+            <button onClick={handleStartNewTurn} className={styles.newTurnButton}>
+               Novo Turno
+           </button>
         </div>
       </main>
     </div>
