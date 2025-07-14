@@ -21,17 +21,16 @@ const wordList: Word[] = [
   { parts: ["ARCO", "ÍRIS"], keyword: "ARCO-ÍRIS" },
 ];
 
-// O nome da função foi alterado aqui
 export default function GameClient() {
   const hasMounted = useHasMounted();
   const canvasRef1 = useRef<CanvasRef | any>(null);
   const canvasRef2 = useRef<CanvasRef | any>(null);
 
-  const [roomId, setRoomId] = useState<string>("default-room");
+  const [roomId, setRoomId] = useState<string>("");
   const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
   const [hasJoined, setHasJoined] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string>("");
 
-  const [currentPlayerId, setCurrentPlayerId] = useState<string>("player1");
   const currentPlayer = selectedPlayerId
     ? MOCKED_PLAYERS[selectedPlayerId]
     : null;
@@ -71,14 +70,25 @@ export default function GameClient() {
           break;
         case "GAME_STATE_UPDATE":
           setGame(message.payload.game);
-          setMessage(message.payload.message);
+          setMessage(message.payload.message || "");
           break;
+        case "ERROR":
+          setErrorMessage(message.payload.message);
+          break;
+        case "NEW_TURN":
+            setGame(message.payload.game);
+            setMessage(message.payload.message);
+            canvasRef1.current?.clear();
+            canvasRef2.current?.clear();
+            break;
+
       }
     };
   }, [socket, hasJoined]);
 
   const handleJoinRoom = () => {
-    if (socket && selectedPlayerId && roomId) {
+      if (socket && selectedPlayerId && roomId) {
+          setErrorMessage(""); // Limpa mensagens de erro anteriores
       socket.send(
         JSON.stringify({
           type: "JOIN_ROOM",
@@ -89,65 +99,12 @@ export default function GameClient() {
     }
   };
 
-  const broadcastGameState = (
-    updatedGame: GameState,
-    updatedMessage: string
-  ) => {
-    if (socket && hasJoined) {
-      socket.send(
-        JSON.stringify({
-          type: "GAME_STATE_UPDATE",
-          payload: {
-            game: updatedGame,
-            message: updatedMessage,
-            roomId: roomId,
-          },
-        })
-      );
-    }
-  };
-
-  const startNewTurn = () => {
-    const randomIndex = Math.floor(Math.random() * wordList.length);
-    const newWord = wordList[randomIndex];
-    const newGame: GameState = {
-      word: newWord,
-      drawer1: { id: "player1", word: newWord.parts[0] },
-      drawer2: { id: "player2", word: newWord.parts[1] },
-      guesses: [],
-      score: 0,
-      partsGuessed: [],
+    const handleStartNewTurn = () => {
+        if (socket && roomId) {
+            socket.send(JSON.stringify({ type: "START_NEW_TURN", payload: { roomId } }));
+        }
     };
-    const newMessage = "Novo turno! Um palpite de cada vez.";
 
-    setGame(newGame);
-    setMessage(newMessage);
-    canvasRef1.current?.clear();
-    canvasRef2.current?.clear();
-    broadcastGameState(newGame, newMessage);
-
-    if (socket) {
-      socket.send(
-        JSON.stringify({
-          type: "CLEAR",
-          payload: { drawerId: "DRAWER_1", roomId },
-        })
-      );
-      socket.send(
-        JSON.stringify({
-          type: "CLEAR",
-          payload: { drawerId: "DRAWER_2", roomId },
-        })
-      );
-    }
-  };
-
-  useEffect(() => {
-    // Esta lógica pode precisar de revisão, mas não causa o erro de hidratação
-    if (currentPlayer?.id === "player1" && hasJoined) {
-      startNewTurn();
-    }
-  }, [currentPlayer, hasJoined]);
 
   const handleDraw = (drawData: any, drawerId: string) => {
     if (socket && hasJoined) {
@@ -162,7 +119,6 @@ export default function GameClient() {
 
   const handleClear = (drawerId: string) => {
     if (socket && hasJoined) {
-      // Limpa localmente primeiro para resposta imediata
       if (drawerId === "DRAWER_1") canvasRef1.current?.clear();
       if (drawerId === "DRAWER_2") canvasRef2.current?.clear();
 
@@ -176,64 +132,28 @@ export default function GameClient() {
   };
 
   const handleGuess = (guessText: string) => {
-    if (!game.word || !currentPlayer) return;
-    const guessUpper = guessText.toUpperCase();
-    const { keyword, parts } = game.word;
-
-    let newGuess: Guess = {
-      user: currentPlayer.name,
-      text: guessText,
-      type: "guess",
-    };
-    let newPartsGuessed = [...game.partsGuessed];
-    let messageUpdate = "Tente novamente!";
-    let shouldStartNewTurn = false;
-
-    if (guessUpper === keyword.toUpperCase()) {
-      newGuess.type = "correct_keyword";
-      messageUpdate = `Parabéns! "${keyword}"! Novo turno...`;
-      shouldStartNewTurn = true;
-    } else if (
-      guessUpper === parts[0].toUpperCase() &&
-      !newPartsGuessed.includes(parts[0].toUpperCase())
-    ) {
-      newPartsGuessed.push(parts[0].toUpperCase());
-      newGuess.type = "correct_part";
-      messageUpdate = `Boa! Acertaram a parte "${parts[0]}"!`;
-    } else if (
-      guessUpper === parts[1].toUpperCase() &&
-      !newPartsGuessed.includes(parts[1].toUpperCase())
-    ) {
-      newPartsGuessed.push(parts[1].toUpperCase());
-      newGuess.type = "correct_part";
-      messageUpdate = `Incrível! Acertaram a parte "${parts[1]}"!`;
-    }
-
-    if (newPartsGuessed.length === 2 && !shouldStartNewTurn) {
-      messageUpdate = `Excelente! Vocês descobriram "${keyword}"! Novo turno...`;
-      shouldStartNewTurn = true;
-    }
-
-    const updatedGame = {
-      ...game,
-      guesses: [...game.guesses, newGuess],
-      partsGuessed: newPartsGuessed,
-    };
-
-    broadcastGameState(updatedGame, messageUpdate);
-
-    if (shouldStartNewTurn) setTimeout(startNewTurn, 3000);
+      if (socket && currentPlayer && roomId) {
+          socket.send(JSON.stringify({
+              type: "SUBMIT_GUESS",
+              payload: {
+                  roomId,
+                  playerId: currentPlayer.id,
+                  guess: guessText
+              }
+          }));
+      }
   };
 
+
   if (!hasMounted) {
-    return null; 
+    return null;
   }
 
   if (!hasJoined || !currentPlayer) {
     return (
       <div className={styles.container}>
         <main className={styles.mainContent}>
-          <h2>Escolha seu Papel</h2>
+          <h2>Escolha seu Papel e Sala</h2>
           <div className={styles.playerSelectorGroup}>
             {Object.values(MOCKED_PLAYERS).map((player) => (
               <button
@@ -253,9 +173,17 @@ export default function GameClient() {
               </button>
             ))}
           </div>
-          <button onClick={handleJoinRoom} disabled={!selectedPlayerId}>
+          <input
+            type="text"
+            value={roomId}
+            onChange={(e) => setRoomId(e.target.value)}
+            placeholder="ID da Sala"
+            className={styles.roomInput}
+          />
+          <button onClick={handleJoinRoom} disabled={!selectedPlayerId || !roomId}>
             Entrar na Sala
           </button>
+          {errorMessage && <p className={styles.errorMessage}>{errorMessage}</p>}
         </main>
       </div>
     );
@@ -268,7 +196,7 @@ export default function GameClient() {
           <DrawingArea
             canvasRef={canvasRef1}
             title="Desenhista 1"
-            wordToDraw={game.drawer1.word}
+            wordToDraw={game.drawer1.id === currentPlayer.id ? game.drawer1.word : ""}
             isMyTurn={currentPlayer.role === "DRAWER_1"}
             drawerId="DRAWER_1"
             onDraw={(drawData: any) => handleDraw(drawData, "DRAWER_1")}
@@ -277,7 +205,7 @@ export default function GameClient() {
           <DrawingArea
             canvasRef={canvasRef2}
             title="Desenhista 2"
-            wordToDraw={game.drawer2.word}
+            wordToDraw={game.drawer2.id === currentPlayer.id ? game.drawer2.word : ""}
             isMyTurn={currentPlayer.role === "DRAWER_2"}
             drawerId="DRAWER_2"
             onDraw={(drawData: any) => handleDraw(drawData, "DRAWER_2")}
@@ -291,6 +219,11 @@ export default function GameClient() {
             message={message}
             currentPlayer={currentPlayer}
           />
+           {currentPlayer.id === 'player1' && (
+                <button onClick={handleStartNewTurn} className={styles.newTurnButton}>
+                    Novo Turno
+                </button>
+            )}
         </div>
       </main>
     </div>

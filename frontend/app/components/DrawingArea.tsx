@@ -52,7 +52,7 @@ const DrawingArea: React.FC<DrawingAreaProps> = ({
       )}
     >
       <h2 className={styles.drawingAreaTitle}>{title}</h2>
-      {isMyTurn && (
+      {isMyTurn && wordToDraw && (
         <div className={styles.wordToDraw}>
           <p className={styles.wordToDrawLabel}>Sua palavra para desenhar é:</p>
           <p className={styles.wordToDrawText}>{wordToDraw}</p>
