@@ -1,6 +1,6 @@
 # Rabisco
 
-![Rabisco Gameplay](./frontend/public/github_ex.mp4) **Rabisco** é um jogo multiplayer online de desenho e adivinhação em tempo real, desenvolvido como um projeto de aplicação da matéria Redes de Computadores. Ele é inspirado no clássico Gartic, com o diferencial de que a palavra-chave a ser adivinhada é composta, e dois jogadores desenham cada parte dela simultaneamente.
+![Rabisco Gameplay](./frontend/public/github_ex.gif) **Rabisco** é um jogo multiplayer online de desenho e adivinhação em tempo real, desenvolvido como um projeto de aplicação da matéria Redes de Computadores. Ele é inspirado no clássico Gartic, com o diferencial de que a palavra-chave a ser adivinhada é composta, e dois jogadores desenham cada parte dela simultaneamente.
 
 ## ✨ Funcionalidades
 
